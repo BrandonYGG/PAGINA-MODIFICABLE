@@ -1,0 +1,27 @@
+/* gallery.css */
+
+/* Fondo de toda la sección */
+#gallery {
+  background: linear-gradient(135deg, #faf3e0, #f8e1ba); /* marfil suave a beige dorado */
+}
+
+/* Animación de levitación para el título */
+.animate-hoverLevitate {
+  transition: transform 0.3s ease, text-shadow 0.3s ease;
+}
+
+.animate-hoverLevitate:hover {
+  transform: translateY(-8px) scale(1.05);
+  text-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Tarjetas de los proyectos */
+.proyecto-card {
+  background-color: #fdf6ec; /* beige claro que combina con el fondo */
+  border: 3px solid #f7d9a5; /* borde dorado suave */
+}
+
+.proyecto-card:hover {
+  background-color: #fefaf5; /* tono más claro al pasar el cursor */
+  border-color: #f5c97a; /* borde dorado más intenso */
+}

@@ -1,0 +1,392 @@
+/* ==========================
+   Animaciones Modernas Mejoradas con Glassmorphism
+   ========================== */
+
+/* Variables CSS para animaciones mejoradas */
+:root {
+  --animation-duration: 0.8s;
+  --animation-easing: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(148, 163, 184, 0.3);
+  --shadow-soft: 0 8px 30px rgba(15, 23, 42, 0.08);
+  --shadow-medium: 0 15px 40px rgba(15, 23, 42, 0.12);
+  --shadow-large: 0 25px 60px rgba(15, 23, 42, 0.15);
+}
+
+/* Fade In mejorado con desplazamiento y blur */
+@keyframes fadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(40px) scale(0.95);
+    filter: blur(8px);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translateY(10px) scale(0.98);
+    filter: blur(4px);
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn var(--animation-duration) var(--animation-easing) forwards;
+}
+
+/* Desplazamiento hacia arriba con rebote más elegante */
+@keyframes slideUp {
+  0% {
+    transform: translateY(60px) scale(0.9);
+    opacity: 0;
+    filter: blur(6px);
+  }
+  40% {
+    transform: translateY(-8px) scale(1.03);
+    opacity: 0.7;
+    filter: blur(2px);
+  }
+  70% {
+    transform: translateY(4px) scale(0.99);
+    opacity: 0.9;
+    filter: blur(1px);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    filter: blur(0px);
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp var(--animation-duration) var(--animation-easing) forwards;
+}
+
+/* Desplazamiento hacia abajo mejorado */
+@keyframes slideDown {
+  0% {
+    transform: translateY(-50px) scale(0.95);
+    opacity: 0;
+    filter: blur(6px);
+  }
+  50% {
+    transform: translateY(8px) scale(1.02);
+    opacity: 0.8;
+    filter: blur(2px);
+  }
+  80% {
+    transform: translateY(-2px) scale(1.01);
+    opacity: 0.95;
+    filter: blur(1px);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    filter: blur(0px);
+  }
+}
+
+.animate-slideDown {
+  animation: slideDown var(--animation-duration) var(--animation-easing) forwards;
+}
+
+/* Rebote mejorado con efectos 3D más pronunciados */
+@keyframes bounceIn {
+  0% {
+    transform: translateY(50px) scale(0.8) rotateX(90deg);
+    opacity: 0;
+    filter: blur(10px);
+  }
+  30% {
+    transform: translateY(-20px) scale(1.15) rotateX(-15deg);
+    opacity: 0.6;
+    filter: blur(4px);
+  }
+  50% {
+    transform: translateY(8px) scale(0.95) rotateX(8deg);
+    opacity: 0.8;
+    filter: blur(2px);
+  }
+  70% {
+    transform: translateY(-4px) scale(1.05) rotateX(-4deg);
+    opacity: 0.95;
+    filter: blur(1px);
+  }
+  100% {
+    transform: translateY(0) scale(1) rotateX(0deg);
+    opacity: 1;
+    filter: blur(0px);
+  }
+}
+
+.animate-bounceIn {
+  animation: bounceIn var(--animation-duration) var(--animation-easing) forwards;
+}
+
+/* ==========================
+   Efectos de Hover Mejorados
+   ========================== */
+
+/* Levitación avanzada con rotación */
+@keyframes hoverLift {
+  0% {
+    transform: translateY(0) scale(1) rotateZ(0deg);
+    box-shadow: var(--shadow-soft);
+  }
+  50% {
+    transform: translateY(-12px) scale(1.05) rotateZ(2deg);
+    box-shadow: var(--shadow-large);
+  }
+  100% {
+    transform: translateY(-6px) scale(1.02) rotateZ(-1deg);
+    box-shadow: var(--shadow-medium);
+  }
+}
+
+.animate-hoverLift:hover {
+  animation: hoverLift 0.6s var(--animation-easing) forwards;
+}
+
+/* Efecto de pulsación con glow mejorado */
+@keyframes pulse-glow {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 15px rgba(59, 130, 246, 0);
+    filter: brightness(1.1);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2.5s infinite;
+}
+
+/* Animación de brillo deslizante mejorada */
+@keyframes shine {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+    opacity: 0;
+  }
+}
+
+.shine-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-effect::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    rgba(255, 255, 255, 0.6),
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  transition: transform 0.8s;
+}
+
+.shine-effect:hover::before {
+  animation: shine 0.8s ease-in-out;
+}
+
+/* Flotación mejorada */
+@keyframes float {
+  0%, 100% { 
+    transform: translateY(0px) rotate(0deg); 
+  }
+  25% { 
+    transform: translateY(-15px) rotate(1deg); 
+  }
+  50% { 
+    transform: translateY(-25px) rotate(0deg); 
+  }
+  75% { 
+    transform: translateY(-15px) rotate(-1deg); 
+  }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* ==========================
+   Utilidades Modernas Mejoradas
+   ========================== */
+
+/* Scrollbar personalizada más elegante */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Scroll moderno mejorado */
+.scrollbar-modern::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.scrollbar-modern::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(148, 163, 184, 0.1));
+  border-radius: 12px;
+}
+
+.scrollbar-modern::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+  border-radius: 12px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.scrollbar-modern::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #1d4ed8, #1e40af);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+/* Line clamp mejorado */
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.7;
+}
+
+/* Gradiente de texto animado mejorado */
+@keyframes gradient-x {
+  0%, 100% {
+    background-size: 300% 300%;
+    background-position: left center;
+  }
+  25% {
+    background-size: 300% 300%;
+    background-position: right center;
+  }
+  50% {
+    background-size: 300% 300%;
+    background-position: center bottom;
+  }
+  75% {
+    background-size: 300% 300%;
+    background-position: center top;
+  }
+}
+
+.animate-gradient-x {
+  animation: gradient-x 4s ease infinite;
+}
+
+/* Rotación suave en hover mejorada */
+.rotate-hover {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.rotate-hover:hover {
+  transform: rotate(8deg) scale(1.08);
+}
+
+/* Efecto de desenfoque en movimiento mejorado */
+@keyframes blur-to-focus {
+  0% {
+    filter: blur(8px);
+    transform: scale(1.15);
+    opacity: 0;
+  }
+  50% {
+    filter: blur(4px);
+    transform: scale(1.05);
+    opacity: 0.7;
+  }
+  100% {
+    filter: blur(0px);
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-blur-focus {
+  animation: blur-to-focus 1s ease-out forwards;
+}
+
+/* Respiración suave para elementos */
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+.animate-breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+/* Efecto de ondas */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.animate-ripple {
+  animation: ripple 0.6s linear;
+}
+
+/* Delays escalonados mejorados */
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+.delay-500 { animation-delay: 0.5s; }
+.delay-600 { animation-delay: 0.6s; }
+.delay-700 { animation-delay: 0.7s; }
+.delay-800 { animation-delay: 0.8s; }
+.delay-900 { animation-delay: 0.9s; }
+.delay-1000 { animation-delay: 1s; }
+.delay-1500 { animation-delay: 1.5s; }
+.delay-2000 { animation-delay: 2s; }
+
+/* Utilidades de animación adicionales */
+.animate-spin-slow {
+  animation: spin 3s linear infinite;
+}
+
+.animate-bounce-soft {
+  animation: bounce 2s infinite;
+}
+
+.animate-ping-slow {
+  animation: ping 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+}

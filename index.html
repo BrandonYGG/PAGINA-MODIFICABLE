@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="/logo-cruzruiz.png" type="image/png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+    <meta
+      name="description"
+      content="Edificaciones y Construcciones Cruz Ruiz - Soluciones integrales en construcción con altos estándares de calidad"
+    />
+    <meta property="og:title" content="Edificaciones y Construcciones Cruz Ruiz" />
+    <meta property="og:description" content="Soluciones integrales en construcción con altos estándares de calidad" />
+    <meta property="og:image:alt" content="Logo de Edificaciones y Construcciones Cruz Ruiz" />
+    <meta name="twitter:title" content="Edificaciones y Construcciones Cruz Ruiz" />
+    <meta name="twitter:description" content="Soluciones integrales en construcción con altos estándares de calidad" />
+    <link rel="apple-touch-icon" href="/logo-cruzruiz.png" />
+    <title>Edificaciones y Construcciones Cruz Ruiz</title>
+    
+    <!-- Script para evitar FOUC (Flash Of Unstyled Content) del tema oscuro -->
+    <script>
+      (function() {
+        try {
+          var theme = localStorage.getItem('theme');
+          if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {
+          console.error("Error applying theme from localStorage", e);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <noscript>Necesitas habilitar JavaScript para ejecutar esta aplicación.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
