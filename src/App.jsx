@@ -6,7 +6,8 @@ import Hero from "./components/Hero";
 import Nosotros from "./components/Nosotros";
 import Gallery from "./components/Gallery";
 import Footer from "./components/Footer";
-import Detalle from "./pages/Detalle"; // <-- Página de infografía
+import Detalle from "./pages/Detalle"; 
+import Admin from "./components/Admin"; // <-- NUEVA IMPORTACIÓN
 
 function App() {
   return (
@@ -25,6 +26,9 @@ function App() {
             </div>
           }
         />
+
+        {/* Ruta de administración para el cliente */}
+        <Route path="/admin-proyectos-secret" element={<Admin />} />
 
         {/* Ruta de detalle actualizada para aceptar un ID de infografía */}
         <Route path="/detalle/:infoId" element={<Detalle />} />
