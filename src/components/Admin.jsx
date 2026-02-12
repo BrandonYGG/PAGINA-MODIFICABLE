@@ -23,44 +23,21 @@ const Admin = () => {
     cargarProyectos();
   }, []);
 
-  // Función para BORRAR proyectos (Texto + Archivos físicos)
-  const borrarProyecto = async (proyecto) => {
-    const confirmar = window.confirm(`¿Estás seguro de que quieres borrar "${proyecto.nombre}"? Se eliminarán también todas sus imágenes de la nube.`);
+  // Función para BORRAR proyectos
+  const borrarProyecto = async (id, nombreProyecto) => {
+    const confirmar = window.confirm(`¿Estás seguro de que quieres borrar "${nombreProyecto}"?`);
     
     if (confirmar) {
-      try {
-        // 1. Extraer los nombres de los archivos de las URLs
-        // Las URLs tienen el formato: .../storage/v1/object/public/galeria/nombre_archivo.jpg
-        const extraerNombre = (url) => url.split('/').pop();
+      const { error } = await supabase
+        .from('edificios')
+        .delete()
+        .eq('id', id);
 
-        const nombreMiniatura = extraerNombre(proyecto.miniatura_url);
-        const nombresInfografias = proyecto.infografias.map(url => extraerNombre(url));
-        
-        const todosLosArchivos = [nombreMiniatura, ...nombresInfografias];
-
-        // 2. Borrar archivos físicos del Storage
-        const { error: errorStorage } = await supabase
-          .storage
-          .from('galeria') 
-          .remove(todosLosArchivos);
-
-        if (errorStorage) {
-          console.warn("Aviso: Algunos archivos no se pudieron borrar del Storage:", errorStorage.message);
-        }
-
-        // 3. Borrar la fila de la base de datos
-        const { error: errorDB } = await supabase
-          .from('edificios')
-          .delete()
-          .eq('id', proyecto.id);
-
-        if (errorDB) throw errorDB;
-
-        alert("Proyecto y archivos eliminados con éxito");
+      if (error) {
+        alert("Error al borrar: " + error.message);
+      } else {
+        alert("Proyecto eliminado con éxito");
         cargarProyectos(); // Recargar la lista automáticamente
-
-      } catch (error) {
-        alert("Error al eliminar: " + error.message);
       }
     }
   };
@@ -157,9 +134,8 @@ const Admin = () => {
                     <p className="text-xs text-slate-500">Subido el {new Date(p.created_at).toLocaleDateString()}</p>
                   </div>
                 </div>
-                {/* Enviamos el objeto 'p' completo para poder extraer las URLs de las fotos al borrar */}
                 <button 
-                  onClick={() => borrarProyecto(p)}
+                  onClick={() => borrarProyecto(p.id, p.nombre)}
                   className="bg-red-100 text-red-600 px-4 py-2 rounded-xl font-bold hover:bg-red-600 hover:text-white transition-all text-sm"
                 >
                   Borrar
