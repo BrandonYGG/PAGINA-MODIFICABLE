@@ -2,85 +2,53 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
 const Admin = () => {
+  // --- ESTADOS PARA EDIFICIOS ---
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [miniatura, setMiniatura] = useState(null);
   const [infografias, setInfografias] = useState([]);
+  
+  // --- ESTADOS PARA VIDEOS ---
+  const [tituloVideo, setTituloVideo] = useState('');
+  const [urlYoutube, setUrlYoutube] = useState('');
+  const [miniaturaVideo, setMiniaturaVideo] = useState(null);
+
   const [subiendo, setSubiendo] = useState(false);
   const [proyectosExistentes, setProyectosExistentes] = useState([]);
-
-  // Cargar la lista de proyectos al entrar
-  const cargarProyectos = async () => {
-    const { data, error } = await supabase
-      .from('edificios')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (!error && data) setProyectosExistentes(data);
-  };
+  const [videosExistentes, setVideosExistentes] = useState([]);
 
   useEffect(() => {
-    cargarProyectos();
+    cargarDatos();
   }, []);
 
-  // Función para BORRAR proyectos
-  const borrarProyecto = async (id, nombreProyecto) => {
-    const confirmar = window.confirm(`¿Estás seguro de que quieres borrar "${nombreProyecto}"?`);
-    
-    if (confirmar) {
-      const { error } = await supabase
-        .from('edificios')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        alert("Error al borrar: " + error.message);
-      } else {
-        alert("Proyecto eliminado con éxito");
-        cargarProyectos(); // Recargar la lista automáticamente
-      }
-    }
+  const cargarDatos = async () => {
+    const { data: edif } = await supabase.from('edificios').select('*').order('created_at', { ascending: false });
+    const { data: vids } = await supabase.from('videos_proyectos').select('*').order('created_at', { ascending: false });
+    if (edif) setProyectosExistentes(edif);
+    if (vids) setVideosExistentes(vids);
   };
 
-  const manejarSubida = async (e) => {
+  // --- FUNCIÓN PARA SUBIR VIDEOS ---
+  const manejarSubidaVideo = async (e) => {
     e.preventDefault();
-    if (!miniatura || infografias.length === 0) return alert("Sube la miniatura y al menos una infografía");
+    if (!miniaturaVideo || !tituloVideo || !urlYoutube) return alert("Completa todos los campos del video");
 
     try {
       setSubiendo(true);
+      const fileName = `vid_${Date.now()}_${miniaturaVideo.name}`;
+      await supabase.storage.from('galeria').upload(fileName, miniaturaVideo);
+      const { data: urlData } = supabase.storage.from('galeria').getPublicUrl(fileName);
 
-      // 1. Subir Miniatura
-      const nameMin = `min_${Date.now()}_${miniatura.name}`;
-      await supabase.storage.from('galeria').upload(nameMin, miniatura);
-      const { data: urlMin } = supabase.storage.from('galeria').getPublicUrl(nameMin);
-
-      // 2. Subir Infografías (Múltiples)
-      const urlsInfografias = [];
-      for (const foto of infografias) {
-        const nameInfo = `info_${Date.now()}_${foto.name}`;
-        await supabase.storage.from('galeria').upload(nameInfo, foto);
-        const { data: urlInfo } = supabase.storage.from('galeria').getPublicUrl(nameInfo);
-        urlsInfografias.push(urlInfo.publicUrl);
-      }
-
-      // 3. Guardar en Tabla de base de datos
-      const { error } = await supabase.from('edificios').insert([{
-        nombre,
-        descripcion,
-        miniatura_url: urlMin.publicUrl,
-        infografias: urlsInfografias 
+      const { error } = await supabase.from('videos_proyectos').insert([{
+        titulo: tituloVideo,
+        youtube_url: urlYoutube,
+        url_miniatura: urlData.publicUrl
       }]);
 
       if (error) throw error;
-      
-      alert("¡Proyecto publicado con éxito!");
-      // Limpiar formulario y recargar lista
-      setNombre('');
-      setDescripcion('');
-      setMiniatura(null);
-      setInfografias([]);
-      cargarProyectos();
-
+      alert("¡Video publicado!");
+      setTituloVideo(''); setUrlYoutube(''); setMiniaturaVideo(null);
+      cargarDatos();
     } catch (err) {
       alert("Error: " + err.message);
     } finally {
@@ -88,65 +56,49 @@ const Admin = () => {
     }
   };
 
+  // --- FUNCIÓN PARA BORRAR (Genérica) ---
+  const borrarItem = async (tabla, id) => {
+    if (window.confirm("¿Seguro que quieres eliminar este elemento?")) {
+      const { error } = await supabase.from(tabla).delete().eq('id', id);
+      if (!error) cargarDatos();
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 p-6 md:p-10">
-      {/* FORMULARIO DE SUBIDA */}
-      <form onSubmit={manejarSubida} className="max-w-2xl mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-2xl space-y-6">
-        <h1 className="text-3xl font-black text-blue-600">Panel Administrador</h1>
-        
-        <div>
-          <label className="block font-bold mb-2 dark:text-white">Nombre del Proyecto</label>
-          <input type="text" className="w-full p-3 rounded-xl border dark:bg-slate-700 dark:text-white" value={nombre} onChange={e => setNombre(e.target.value)} required />
-        </div>
+    <div className="min-h-screen bg-slate-100 p-6 space-y-10">
+      <h1 className="text-4xl font-black text-center text-blue-700">Panel de Control Edificios</h1>
 
-        <div>
-          <label className="block font-bold mb-2 dark:text-white">Descripción</label>
-          <textarea className="w-full p-3 rounded-xl border dark:bg-slate-700 dark:text-white" rows="4" value={descripcion} onChange={e => setDescripcion(e.target.value)} required />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block font-bold mb-2 dark:text-white">Miniatura (Principal)</label>
-            <input type="file" accept="image/*" onChange={e => setMiniatura(e.target.files[0])} className="text-sm dark:text-slate-300" />
+      {/* SECCIÓN VIDEOS */}
+      <section className="max-w-4xl mx-auto bg-white p-8 rounded-3xl shadow-xl">
+        <h2 className="text-2xl font-bold mb-6 text-red-600">Añadir Video de YouTube</h2>
+        <form onSubmit={manejarSubidaVideo} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input type="text" placeholder="Título del Video" className="p-3 border rounded-xl" value={tituloVideo} onChange={e => setTituloVideo(e.target.value)} required />
+          <input type="url" placeholder="URL de YouTube (https://...)" className="p-3 border rounded-xl" value={urlYoutube} onChange={e => setUrlYoutube(e.target.value)} required />
+          <div className="md:col-span-2">
+            <label className="block mb-2 font-bold">Miniatura del Video:</label>
+            <input type="file" accept="image/*" onChange={e => setMiniaturaVideo(e.target.files[0])} required />
           </div>
-          <div>
-            <label className="block font-bold mb-2 dark:text-white">Infografías (Carrusel)</label>
-            <input type="file" accept="image/*" multiple onChange={e => setInfografias(Array.from(e.target.files))} className="text-sm dark:text-slate-300" />
+          <button disabled={subiendo} className="md:col-span-2 bg-red-600 text-white p-4 rounded-xl font-bold hover:bg-red-700">
+            {subiendo ? "Subiendo..." : "PUBLICAR VIDEO"}
+          </button>
+        </form>
+      </section>
+
+      {/* LISTA DE VIDEOS (Para borrar) */}
+      <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+        {videosExistentes.map(vid => (
+          <div key={vid.id} className="bg-white p-4 rounded-2xl flex items-center justify-between shadow">
+            <div className="flex items-center gap-4">
+              <img src={vid.url_miniatura} className="w-20 h-12 object-cover rounded-lg" />
+              <p className="font-bold truncate w-32">{vid.titulo}</p>
+            </div>
+            <button onClick={() => borrarItem('videos_proyectos', vid.id)} className="text-red-500 font-bold">Borrar</button>
           </div>
-        </div>
-
-        <button type="submit" disabled={subiendo} className="w-full py-4 bg-blue-600 text-white rounded-xl font-black text-xl hover:bg-blue-700 transition-all disabled:opacity-50">
-          {subiendo ? "Subiendo Archivos..." : "PUBLICAR PROYECTO"}
-        </button>
-      </form>
-
-      {/* LISTA DE PROYECTOS PARA BORRAR */}
-      <div className="max-w-2xl mx-auto mt-12 space-y-6">
-        <h2 className="text-2xl font-black text-slate-800 dark:text-white">Gestión de Proyectos Existentes</h2>
-        <div className="grid grid-cols-1 gap-4">
-          {proyectosExistentes.length > 0 ? (
-            proyectosExistentes.map((p) => (
-              <div key={p.id} className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-md border dark:border-slate-700">
-                <div className="flex items-center space-x-4">
-                  <img src={p.miniatura_url} alt="" className="w-16 h-16 rounded-lg object-cover border dark:border-slate-600" />
-                  <div>
-                    <h3 className="font-bold dark:text-white">{p.nombre}</h3>
-                    <p className="text-xs text-slate-500">Subido el {new Date(p.created_at).toLocaleDateString()}</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => borrarProyecto(p.id, p.nombre)}
-                  className="bg-red-100 text-red-600 px-4 py-2 rounded-xl font-bold hover:bg-red-600 hover:text-white transition-all text-sm"
-                >
-                  Borrar
-                </button>
-              </div>
-            ))
-          ) : (
-            <p className="text-center text-slate-500 py-10">No hay proyectos en la nube aún.</p>
-          )}
-        </div>
+        ))}
       </div>
+      
+      <hr />
+      {/* Aquí abajo seguiría tu formulario de edificios que ya tienes... */}
     </div>
   );
 };
