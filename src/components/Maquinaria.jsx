@@ -6,26 +6,25 @@ const Maquinaria = () => {
       id: 1,
       nombre: "Vibrocompactador",
       imagen: "/img-maquinaria/vibro.jpg",
-      precios: { dia: "Disponible", semana: "Disponible", mes: "Disponible" }
+      detalle: "Renta por día, semana o mes"
     },
     {
       id: 2,
       nombre: "Motoconformadora",
       imagen: "/img-maquinaria/moto.jpg",
-      precios: { dia: "Disponible", semana: "Disponible", mes: "Disponible" }
+      detalle: "Renta por día, semana o mes"
     },
     {
       id: 3,
       nombre: "Retroexcavadora",
       imagen: "/img-maquinaria/retro.jpg",
-      precios: { dia: "Disponible", semana: "Disponible", mes: "Disponible" }
+      detalle: "Renta por día, semana o mes"
     },
     {
       id: 4,
       nombre: "Renta de Andamios",
       imagen: "/img-maquinaria/andamio.jpg",
-      nota: "Renta por semana (Máximo 1 mes)",
-      precios: { semana: "Disponible", mes: "Máx. 30 días" }
+      detalle: "Renta por semana (Máximo 1 mes)"
     }
   ];
 
@@ -34,53 +33,33 @@ const Maquinaria = () => {
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-black text-white mb-4 uppercase tracking-tighter">
-            Renta de <span className="text-yellow-500">Maquinaria y Equipo</span>
+            Nuestra <span className="text-yellow-500">Maquinaria y Equipo</span>
           </h2>
           <div className="w-24 h-2 bg-yellow-500 mx-auto rounded-full"></div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {equipos.map((item) => (
-            <div key={item.id} className="bg-slate-800 rounded-3xl overflow-hidden border border-slate-700 shadow-2xl flex flex-col">
-              <div className="aspect-video w-full overflow-hidden bg-slate-700">
+            <div key={item.id} className="group bg-slate-800 rounded-3xl overflow-hidden border border-slate-700 shadow-xl transition-all hover:border-yellow-500/50">
+              {/* Contenedor de Imagen */}
+              <div className="aspect-[4/3] w-full overflow-hidden bg-slate-700">
                 <img 
                   src={item.imagen} 
                   alt={item.nombre} 
-                  className="w-full h-full object-cover"
-                  onError={(e) => { e.target.src = "https://via.placeholder.com/400x300?text=Subir+Imagen"; }}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  onError={(e) => { e.target.src = "https://via.placeholder.com/400x300?text=Imagen+No+Encontrada"; }}
                 />
               </div>
               
-              <div className="p-6 flex-grow">
-                <h3 className="text-xl font-black text-yellow-500 uppercase mb-4">{item.nombre}</h3>
-                
-                <div className="space-y-2 text-sm">
-                  {item.precios.dia && (
-                    <div className="flex justify-between border-b border-slate-700 pb-1">
-                      <span className="text-slate-400">Por Día:</span>
-                      <span className="text-white font-bold">{item.precios.dia}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between border-b border-slate-700 pb-1">
-                    <span className="text-slate-400">Por Semana:</span>
-                    <span className="text-white font-bold">{item.precios.semana}</span>
-                  </div>
-                  <div className="flex justify-between border-b border-slate-700 pb-1">
-                    <span className="text-slate-400">Por Mes:</span>
-                    <span className="text-white font-bold">{item.precios.mes}</span>
-                  </div>
-                </div>
-
-                {item.nota && (
-                  <p className="mt-4 text-[10px] text-yellow-500/70 font-bold uppercase italic">
-                    * {item.nota}
-                  </p>
-                )}
+              {/* Información de Presentación */}
+              <div className="p-6 text-center">
+                <h3 className="text-lg font-black text-white uppercase mb-2 group-hover:text-yellow-500 transition-colors">
+                  {item.nombre}
+                </h3>
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">
+                  {item.detalle}
+                </p>
               </div>
-
-              <button className="w-full py-4 bg-yellow-500 hover:bg-yellow-600 text-black font-black uppercase transition-colors">
-                Cotizar Ahora
-              </button>
             </div>
           ))}
         </div>

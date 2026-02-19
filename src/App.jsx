@@ -1,12 +1,16 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
+// Componentes de la página principal
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import Nosotros from "./components/Nosotros";
 import Gallery from "./components/Gallery";
-import VideoGallery from "./components/VideoGallery"; // <-- 1. IMPORTAMOS LA NUEVA SECCIÓN
+import VideoGallery from "./components/VideoGallery";
+import Maquinaria from "./components/Maquinaria"; // <-- NUEVA IMPORTACIÓN
 import Footer from "./components/Footer";
+
+// Páginas secundarias
 import Detalle from "./pages/Detalle"; 
 import Admin from "./components/Admin"; 
 
@@ -23,24 +27,25 @@ function App() {
               <Hero />
               <Nosotros />
               <Gallery />
-              {/* 2. INSERTAMOS LA GALERÍA DE VIDEOS AQUÍ */}
               <VideoGallery /> 
+              {/* INSERTAMOS LA MAQUINARIA AQUÍ ABAJO */}
+              <Maquinaria /> 
               <Footer />
             </div>
           }
         />
 
-        {/* Ruta de administración para el cliente */}
+        {/* Ruta de administración */}
         <Route path="/admin-proyectos-secret" element={<Admin />} />
 
-        {/* Ruta de detalle actualizada para aceptar un ID de infografía */}
+        {/* Ruta de detalle */}
         <Route path="/detalle/:infoId" element={<Detalle />} />
         
-        {/* Redirección para la ruta antigua /detalle a una por defecto */}
+        {/* Redirección por defecto para detalles */}
         <Route path="/detalle" element={<Navigate to="/detalle/Info1" replace />} />
       </Routes>
     </Router>
   );
 }
 
-export default App;
+export default App; 
