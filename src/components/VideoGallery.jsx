@@ -19,11 +19,16 @@ const VideoGallery = () => {
   return (
     <section id="videos" className="py-20 bg-slate-50">
       <div className="max-w-7xl mx-auto px-6">
+        
+        {/* TÍTULO ACTUALIZADO SEGÚN SOLICITUD DEL ARQ. GIO */}
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-4 uppercase tracking-tighter">
-            Proyectos en <span className="text-red-600">Movimiento</span>
+            Desarrollo y <span className="text-red-600">Concepto Integral</span>
           </h2>
           <div className="w-24 h-2 bg-red-600 mx-auto rounded-full"></div>
+          <p className="mt-6 text-slate-600 font-medium max-w-xl mx-auto">
+            Explora nuestra metodología de trabajo y la evolución de nuestra identidad a través de nuestras presentaciones y diseños.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
@@ -35,14 +40,14 @@ const VideoGallery = () => {
               rel="noopener noreferrer"
               className="group relative block bg-white rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-3"
             >
-              {/* CONTENEDOR DE LA IMAGEN CORREGIDO */}
+              {/* Contenedor de Imagen con object-contain para no cortar miniaturas */}
               <div className="relative aspect-video bg-slate-200 overflow-hidden">
                 <img 
                   src={video.url_miniatura} 
                   alt={video.titulo}
-                  // CAMBIO CLAVE: Usamos object-contain para que NO se corte
                   className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105"
                 />
+                
                 {/* Botón Play Overlay */}
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                   <div className="w-16 h-16 bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transform transition-transform duration-500 group-hover:scale-110">
@@ -53,12 +58,13 @@ const VideoGallery = () => {
                 </div>
               </div>
 
+              {/* Pie de la tarjeta */}
               <div className="p-6">
                 <h3 className="text-xl font-black text-slate-800 uppercase group-hover:text-red-600 transition-colors">
                   {video.titulo}
                 </h3>
                 <div className="mt-3 flex items-center text-red-600 font-bold text-sm">
-                  VER EN YOUTUBE 
+                  REPRODUCIR VIDEO 
                   <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
@@ -67,6 +73,11 @@ const VideoGallery = () => {
             </a>
           ))}
         </div>
+
+        {/* Mensaje de carga si no hay videos aún */}
+        {videos.length === 0 && (
+          <p className="text-center text-slate-400 mt-10 italic">Cargando material de desarrollo...</p>
+        )}
       </div>
     </section>
   );

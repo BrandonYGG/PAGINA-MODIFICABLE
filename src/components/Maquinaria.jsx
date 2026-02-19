@@ -33,7 +33,7 @@ const Maquinaria = () => {
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-black text-white mb-4 uppercase tracking-tighter">
-            Nuestra <span className="text-yellow-500">Maquinaria y Equipo</span>
+            RENTA DE <span className="text-yellow-500">Maquinaria Pesada</span>
           </h2>
           <div className="w-24 h-2 bg-yellow-500 mx-auto rounded-full"></div>
         </div>
