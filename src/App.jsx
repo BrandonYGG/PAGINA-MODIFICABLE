@@ -5,9 +5,10 @@ import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import Nosotros from "./components/Nosotros";
 import Gallery from "./components/Gallery";
+import VideoGallery from "./components/VideoGallery"; // <-- 1. IMPORTAMOS LA NUEVA SECCIÓN
 import Footer from "./components/Footer";
 import Detalle from "./pages/Detalle"; 
-import Admin from "./components/Admin"; // <-- NUEVA IMPORTACIÓN
+import Admin from "./components/Admin"; 
 
 function App() {
   return (
@@ -22,6 +23,8 @@ function App() {
               <Hero />
               <Nosotros />
               <Gallery />
+              {/* 2. INSERTAMOS LA GALERÍA DE VIDEOS AQUÍ */}
+              <VideoGallery /> 
               <Footer />
             </div>
           }
