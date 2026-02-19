@@ -5,9 +5,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import Nosotros from "./components/Nosotros";
+import Servicios from "./components/Servicios"; // <-- 1. IMPORTAMOS SERVICIOS
 import Gallery from "./components/Gallery";
 import VideoGallery from "./components/VideoGallery";
-import Maquinaria from "./components/Maquinaria"; // <-- NUEVA IMPORTACIÓN
+import Maquinaria from "./components/Maquinaria"; 
 import Footer from "./components/Footer";
 
 // Páginas secundarias
@@ -26,9 +27,10 @@ function App() {
               <Navbar />
               <Hero />
               <Nosotros />
+              {/* 2. INSERTAMOS SERVICIOS AQUÍ */}
+              <Servicios /> 
               <Gallery />
               <VideoGallery /> 
-              {/* INSERTAMOS LA MAQUINARIA AQUÍ ABAJO */}
               <Maquinaria /> 
               <Footer />
             </div>
@@ -48,4 +50,4 @@ function App() {
   );
 }
 
-export default App; 
+export default App;
