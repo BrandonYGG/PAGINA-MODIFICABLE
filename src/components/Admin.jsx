@@ -11,7 +11,9 @@ const Admin = () => {
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [miniaturaEdificio, setMiniaturaEdificio] = useState(null);
-  const [infografias, setInfografias] = useState([]);
+  
+  // NUEVO: Estado para manejar el orden de las fotos antes de subir
+  const [archivosOrdenados, setArchivosOrdenados] = useState([]);
 
   // --- ESTADOS FORMULARIO VIDEOS ---
   const [tituloVideo, setTituloVideo] = useState('');
@@ -29,9 +31,18 @@ const Admin = () => {
     if (vids) setVideosExistentes(vids);
   };
 
+  // --- NUEVO: Lógica para mover archivos en la previsualización ---
+  const moverArchivo = (index, direccion) => {
+    const nuevosArchivos = [...archivosOrdenados];
+    const file = nuevosArchivos.splice(index, 1)[0];
+    const nuevaPos = direccion === 'izq' ? index - 1 : index + 1;
+    nuevosArchivos.splice(nuevaPos, 0, file);
+    setArchivosOrdenados(nuevosArchivos);
+  };
+
   const manejarSubidaEdificio = async (e) => {
     e.preventDefault();
-    if (!miniaturaEdificio || infografias.length === 0) return alert("Sube la miniatura y al menos una infografía");
+    if (!miniaturaEdificio || archivosOrdenados.length === 0) return alert("Sube la miniatura y al menos una infografía");
 
     try {
       setSubiendo(true);
@@ -40,7 +51,8 @@ const Admin = () => {
       const { data: urlMin } = supabase.storage.from('galeria').getPublicUrl(nameMin);
 
       const urlsInfografias = [];
-      for (const foto of infografias) {
+      // Usamos el arreglo ORDENADO por el usuario
+      for (const foto of archivosOrdenados) {
         const nameInfo = `info_${Date.now()}_${foto.name}`;
         await supabase.storage.from('galeria').upload(nameInfo, foto);
         const { data: urlInfo } = supabase.storage.from('galeria').getPublicUrl(nameInfo);
@@ -56,7 +68,7 @@ const Admin = () => {
 
       if (error) throw error;
       alert("¡Edificio publicado!");
-      setNombre(''); setDescripcion(''); setMiniaturaEdificio(null); setInfografias([]);
+      setNombre(''); setDescripcion(''); setMiniaturaEdificio(null); setArchivosOrdenados([]);
       cargarDatos();
     } catch (err) { alert("Error: " + err.message); } 
     finally { setSubiendo(false); }
@@ -86,11 +98,37 @@ const Admin = () => {
     finally { setSubiendo(false); }
   };
 
-  const borrarItem = async (tabla, id) => {
-    if (window.confirm("¿Seguro que quieres borrar este elemento?")) {
-      const { error } = await supabase.from(tabla).delete().eq('id', id);
-      if (!error) cargarDatos();
-    }
+  // --- MEJORADO: Borrado profundo (Base de datos + Storage) ---
+  const borrarEdificio = async (id, miniaturaUrl, infografiasUrls) => {
+    if (!window.confirm("¿Seguro que quieres borrar este edificio?")) return;
+    try {
+      setSubiendo(true);
+      const filesToDelete = [];
+      if (miniaturaUrl) filesToDelete.push(miniaturaUrl.split('/').pop());
+      if (infografiasUrls) {
+        infografiasUrls.forEach(url => filesToDelete.push(url.split('/').pop()));
+      }
+      if (filesToDelete.length > 0) {
+        await supabase.storage.from('galeria').remove(filesToDelete);
+      }
+      await supabase.from('edificios').delete().eq('id', id);
+      cargarDatos();
+    } catch (err) { alert("Error al borrar: " + err.message); } 
+    finally { setSubiendo(false); }
+  };
+
+  const borrarVideo = async (id, thumbUrl) => {
+    if (!window.confirm("¿Seguro que quieres borrar este video?")) return;
+    try {
+      setSubiendo(true);
+      if (thumbUrl) {
+        const fileName = thumbUrl.split('/').pop();
+        await supabase.storage.from('galeria').remove([fileName]);
+      }
+      await supabase.from('videos_proyectos').delete().eq('id', id);
+      cargarDatos();
+    } catch (err) { alert("Error al borrar: " + err.message); } 
+    finally { setSubiendo(false); }
   };
 
   return (
@@ -103,6 +141,7 @@ const Admin = () => {
         <form onSubmit={manejarSubidaEdificio} className="space-y-4">
           <input type="text" placeholder="Nombre del Edificio" className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 outline-none text-slate-800 font-medium placeholder:text-slate-400" value={nombre} onChange={e => setNombre(e.target.value)} required />
           <textarea placeholder="Descripción del proyecto..." className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 outline-none text-slate-800 font-medium placeholder:text-slate-400" rows="3" value={descripcion} onChange={e => setDescripcion(e.target.value)} required />
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
             <div className="flex flex-col space-y-2">
               <label className="text-sm font-black text-slate-600 uppercase">Miniatura Principal</label>
@@ -110,9 +149,30 @@ const Admin = () => {
             </div>
             <div className="flex flex-col space-y-2">
               <label className="text-sm font-black text-slate-600 uppercase">Infografías (Múltiples)</label>
-              <input type="file" accept="image/*" multiple className="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" onChange={e => setInfografias(Array.from(e.target.files))} />
+              <input type="file" accept="image/*" multiple className="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" 
+                onChange={e => { if (e.target.files) setArchivosOrdenados(Array.from(e.target.files)); }} />
             </div>
+            
+            {/* VISUALIZADOR DE ORDEN ANTES DE PUBLICAR */}
+            {archivosOrdenados.length > 0 && (
+              <div className="col-span-1 md:col-span-2 mt-4">
+                <p className="text-xs text-slate-500 mb-3 uppercase font-black tracking-widest">Orden de Galería (Acomoda las fotos)</p>
+                <div className="flex flex-wrap gap-3">
+                  {archivosOrdenados.map((file, idx) => (
+                    <div key={idx} className="bg-white p-2 border border-slate-200 rounded-xl shadow-sm">
+                      <img src={URL.createObjectURL(file)} className="w-20 h-20 object-cover rounded-lg" />
+                      <div className="flex justify-between items-center mt-2 px-1">
+                        <button type="button" disabled={idx === 0} onClick={() => moverArchivo(idx, 'izq')} className="text-[14px] disabled:opacity-20 text-slate-400 hover:text-blue-600 font-bold">←</button>
+                        <span className="text-[10px] font-black text-slate-500">{idx + 1}</span>
+                        <button type="button" disabled={idx === archivosOrdenados.length - 1} onClick={() => moverArchivo(idx, 'der')} className="text-[14px] disabled:opacity-20 text-slate-400 hover:text-blue-600 font-bold">→</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+
           <button disabled={subiendo} className="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 rounded-2xl font-black text-lg transition-all shadow-lg shadow-blue-200 active:scale-[0.98]">
             {subiendo ? "Subiendo..." : "PUBLICAR EDIFICIO"}
           </button>
@@ -142,21 +202,40 @@ const Admin = () => {
         <div className="space-y-4">
           <h3 className="text-xl font-black text-blue-800 uppercase pl-2">Edificios Activos</h3>
           <div className="space-y-2">
-            {edificiosExistentes.map(e => (
-              <div key={e.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between hover:shadow-md transition-shadow">
-                <span className="truncate font-bold text-slate-700">{e.nombre}</span>
-                <button onClick={() => borrarItem('edificios', e.id)} className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-xs font-black hover:bg-red-600 hover:text-white transition-all uppercase">Borrar</button>
+            {edificiosExistentes.map(edif => (
+              <div key={edif.id} className="relative bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between hover:shadow-md transition-shadow">
+                <span className="truncate font-bold text-slate-700 uppercase">{edif.nombre}</span>
+                <button 
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    borrarEdificio(edif.id, edif.miniatura_url, edif.infografias);
+                  }} 
+                  className="relative z-50 bg-red-50 text-red-600 px-4 py-2 rounded-xl text-xs font-black hover:bg-red-600 hover:text-white transition-all uppercase cursor-pointer active:scale-95"
+                >
+                  Borrar
+                </button>
               </div>
             ))}
           </div>
         </div>
+        
         <div className="space-y-4">
           <h3 className="text-xl font-black text-red-800 uppercase pl-2">Videos Activos</h3>
           <div className="space-y-2">
-            {videosExistentes.map(v => (
-              <div key={v.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between hover:shadow-md transition-shadow">
-                <span className="truncate font-bold text-slate-700">{v.titulo}</span>
-                <button onClick={() => borrarItem('videos_proyectos', v.id)} className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-xs font-black hover:bg-red-600 hover:text-white transition-all uppercase">Borrar</button>
+            {videosExistentes.map(vid => (
+              <div key={vid.id} className="relative bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between hover:shadow-md transition-shadow">
+                <span className="truncate font-bold text-slate-700 uppercase">{vid.titulo}</span>
+                <button 
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    borrarVideo(vid.id, vid.url_miniatura);
+                  }} 
+                  className="relative z-50 bg-red-50 text-red-600 px-4 py-2 rounded-xl text-xs font-black hover:bg-red-600 hover:text-white transition-all uppercase cursor-pointer active:scale-95"
+                >
+                  Borrar
+                </button>
               </div>
             ))}
           </div>
