@@ -11,8 +11,6 @@ const Admin = () => {
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [miniaturaEdificio, setMiniaturaEdificio] = useState(null);
-  
-  // NUEVO: Estado para manejar el orden de las fotos antes de subir
   const [archivosOrdenados, setArchivosOrdenados] = useState([]);
 
   // --- ESTADOS FORMULARIO VIDEOS ---
@@ -31,7 +29,15 @@ const Admin = () => {
     if (vids) setVideosExistentes(vids);
   };
 
-  // --- NUEVO: Lógica para mover archivos en la previsualización ---
+  // --- UTILIDAD: Extraer el nombre real del archivo de la URL de Supabase ---
+  const extraerNombreArchivo = (url) => {
+    if (!url) return null;
+    // Esto toma la parte final de la URL antes de cualquier parámetro '?'
+    const parts = url.split('/');
+    const lastPart = parts[parts.length - 1];
+    return lastPart.split('?')[0]; 
+  };
+
   const moverArchivo = (index, direccion) => {
     const nuevosArchivos = [...archivosOrdenados];
     const file = nuevosArchivos.splice(index, 1)[0];
@@ -46,15 +52,17 @@ const Admin = () => {
 
     try {
       setSubiendo(true);
-      const nameMin = `edif_min_${Date.now()}_${miniaturaEdificio.name}`;
-      await supabase.storage.from('galeria').upload(nameMin, miniaturaEdificio);
+      // Limpiamos el nombre original para evitar caracteres raros
+      const cleanName = (n) => n.replace(/[^a-zA-Z0-9.]/g, '_');
+
+      const nameMin = `edif_min_${Date.now()}_${cleanName(miniaturaEdificio.name)}`;
+      await supabase.storage.from('galeria').upload(nameMin, miniaturaEdificio, { contentType: miniaturaEdificio.type });
       const { data: urlMin } = supabase.storage.from('galeria').getPublicUrl(nameMin);
 
       const urlsInfografias = [];
-      // Usamos el arreglo ORDENADO por el usuario
       for (const foto of archivosOrdenados) {
-        const nameInfo = `info_${Date.now()}_${foto.name}`;
-        await supabase.storage.from('galeria').upload(nameInfo, foto);
+        const nameInfo = `info_${Date.now()}_${cleanName(foto.name)}`;
+        await supabase.storage.from('galeria').upload(nameInfo, foto, { contentType: foto.type });
         const { data: urlInfo } = supabase.storage.from('galeria').getPublicUrl(nameInfo);
         urlsInfografias.push(urlInfo.publicUrl);
       }
@@ -80,8 +88,9 @@ const Admin = () => {
 
     try {
       setSubiendo(true);
-      const fileName = `vid_min_${Date.now()}_${miniaturaVideo.name}`;
-      await supabase.storage.from('galeria').upload(fileName, miniaturaVideo);
+      const cleanName = (n) => n.replace(/[^a-zA-Z0-9.]/g, '_');
+      const fileName = `vid_min_${Date.now()}_${cleanName(miniaturaVideo.name)}`;
+      await supabase.storage.from('galeria').upload(fileName, miniaturaVideo, { contentType: miniaturaVideo.type });
       const { data: urlData } = supabase.storage.from('galeria').getPublicUrl(fileName);
 
       const { error } = await supabase.from('videos_proyectos').insert([{
@@ -98,69 +107,93 @@ const Admin = () => {
     finally { setSubiendo(false); }
   };
 
-  // --- MEJORADO: Borrado profundo (Base de datos + Storage) ---
+  // --- BORRADO PROFUNDO CORREGIDO ---
   const borrarEdificio = async (id, miniaturaUrl, infografiasUrls) => {
-    if (!window.confirm("¿Seguro que quieres borrar este edificio?")) return;
+    if (!window.confirm("¿Seguro que quieres borrar este edificio? Se eliminarán los archivos del servidor.")) return;
     try {
       setSubiendo(true);
       const filesToDelete = [];
-      if (miniaturaUrl) filesToDelete.push(miniaturaUrl.split('/').pop());
-      if (infografiasUrls) {
-        infografiasUrls.forEach(url => filesToDelete.push(url.split('/').pop()));
+      
+      // Extraemos nombres limpios
+      const minName = extraerNombreArchivo(miniaturaUrl);
+      if (minName) filesToDelete.push(minName);
+
+      if (infografiasUrls && Array.isArray(infografiasUrls)) {
+        infografiasUrls.forEach(url => {
+          const name = extraerNombreArchivo(url);
+          if (name) filesToDelete.push(name);
+        });
       }
+
+      // 1. Borrar archivos del Storage
       if (filesToDelete.length > 0) {
-        await supabase.storage.from('galeria').remove(filesToDelete);
+        const { error: storageError } = await supabase.storage.from('galeria').remove(filesToDelete);
+        if (storageError) console.warn("Aviso en Storage:", storageError.message);
       }
-      await supabase.from('edificios').delete().eq('id', id);
+
+      // 2. Borrar registro de la Base de Datos
+      const { error: dbError } = await supabase.from('edificios').delete().eq('id', id);
+      if (dbError) throw dbError;
+
+      alert("Borrado completo con éxito");
       cargarDatos();
-    } catch (err) { alert("Error al borrar: " + err.message); } 
-    finally { setSubiendo(false); }
+    } catch (err) { 
+      alert("Error al borrar: " + err.message); 
+    } finally { 
+      setSubiendo(false); 
+    }
   };
 
   const borrarVideo = async (id, thumbUrl) => {
     if (!window.confirm("¿Seguro que quieres borrar este video?")) return;
     try {
       setSubiendo(true);
-      if (thumbUrl) {
-        const fileName = thumbUrl.split('/').pop();
+      const fileName = extraerNombreArchivo(thumbUrl);
+      
+      if (fileName) {
         await supabase.storage.from('galeria').remove([fileName]);
       }
-      await supabase.from('videos_proyectos').delete().eq('id', id);
+      
+      const { error } = await supabase.from('videos_proyectos').delete().eq('id', id);
+      if (error) throw error;
+      
       cargarDatos();
-    } catch (err) { alert("Error al borrar: " + err.message); } 
-    finally { setSubiendo(false); }
+    } catch (err) { 
+      alert("Error al borrar: " + err.message); 
+    } finally { 
+      setSubiendo(false); 
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-10 space-y-12">
+    <div className="min-h-screen bg-slate-50 p-6 md:p-10 space-y-12 text-slate-900">
       <h1 className="text-4xl font-black text-blue-800 text-center uppercase tracking-tighter">Panel de Control General</h1>
 
       {/* --- FORMULARIO 1: EDIFICIOS --- */}
       <section className="max-w-4xl mx-auto bg-white p-8 rounded-3xl shadow-2xl border-t-8 border-blue-600">
         <h2 className="text-2xl font-black mb-6 text-slate-700">Añadir Nuevo Edificio (Fotos)</h2>
         <form onSubmit={manejarSubidaEdificio} className="space-y-4">
-          <input type="text" placeholder="Nombre del Edificio" className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 outline-none text-slate-800 font-medium placeholder:text-slate-400" value={nombre} onChange={e => setNombre(e.target.value)} required />
-          <textarea placeholder="Descripción del proyecto..." className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 outline-none text-slate-800 font-medium placeholder:text-slate-400" rows="3" value={descripcion} onChange={e => setDescripcion(e.target.value)} required />
+          <input type="text" placeholder="Nombre del Edificio" className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 outline-none font-medium" value={nombre} onChange={e => setNombre(e.target.value)} required />
+          <textarea placeholder="Descripción del proyecto..." className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 outline-none font-medium" rows="3" value={descripcion} onChange={e => setDescripcion(e.target.value)} required />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
             <div className="flex flex-col space-y-2">
               <label className="text-sm font-black text-slate-600 uppercase">Miniatura Principal</label>
-              <input type="file" accept="image/*" className="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" onChange={e => setMiniaturaEdificio(e.target.files[0])} />
+              <input type="file" accept="image/*" className="text-sm text-slate-500 cursor-pointer" onChange={e => setMiniaturaEdificio(e.target.files[0])} />
             </div>
             <div className="flex flex-col space-y-2">
               <label className="text-sm font-black text-slate-600 uppercase">Infografías (Múltiples)</label>
-              <input type="file" accept="image/*" multiple className="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" 
+              <input type="file" accept="image/*" multiple className="text-sm text-slate-500 cursor-pointer" 
                 onChange={e => { if (e.target.files) setArchivosOrdenados(Array.from(e.target.files)); }} />
             </div>
             
-            {/* VISUALIZADOR DE ORDEN ANTES DE PUBLICAR */}
             {archivosOrdenados.length > 0 && (
               <div className="col-span-1 md:col-span-2 mt-4">
-                <p className="text-xs text-slate-500 mb-3 uppercase font-black tracking-widest">Orden de Galería (Acomoda las fotos)</p>
+                <p className="text-xs text-slate-500 mb-3 uppercase font-black tracking-widest">Orden de Galería</p>
                 <div className="flex flex-wrap gap-3">
                   {archivosOrdenados.map((file, idx) => (
                     <div key={idx} className="bg-white p-2 border border-slate-200 rounded-xl shadow-sm">
-                      <img src={URL.createObjectURL(file)} className="w-20 h-20 object-cover rounded-lg" />
+                      <img src={URL.createObjectURL(file)} className="w-20 h-20 object-cover rounded-lg" alt="preview" />
                       <div className="flex justify-between items-center mt-2 px-1">
                         <button type="button" disabled={idx === 0} onClick={() => moverArchivo(idx, 'izq')} className="text-[14px] disabled:opacity-20 text-slate-400 hover:text-blue-600 font-bold">←</button>
                         <span className="text-[10px] font-black text-slate-500">{idx + 1}</span>
@@ -173,7 +206,7 @@ const Admin = () => {
             )}
           </div>
 
-          <button disabled={subiendo} className="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 rounded-2xl font-black text-lg transition-all shadow-lg shadow-blue-200 active:scale-[0.98]">
+          <button disabled={subiendo} className="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 rounded-2xl font-black text-lg transition-all active:scale-[0.98]">
             {subiendo ? "Subiendo..." : "PUBLICAR EDIFICIO"}
           </button>
         </form>
@@ -184,14 +217,14 @@ const Admin = () => {
         <h2 className="text-2xl font-black mb-6 text-slate-700">Añadir Video de YouTube</h2>
         <form onSubmit={manejarSubidaVideo} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input type="text" placeholder="Título del Video" className="p-4 border-2 border-slate-200 rounded-xl focus:border-red-500 outline-none text-slate-800 font-medium placeholder:text-slate-400" value={tituloVideo} onChange={e => setTituloVideo(e.target.value)} required />
-            <input type="url" placeholder="Link de YouTube (https://...)" className="p-4 border-2 border-slate-200 rounded-xl focus:border-red-500 outline-none text-slate-800 font-medium placeholder:text-slate-400" value={urlYoutube} onChange={e => setUrlYoutube(e.target.value)} required />
+            <input type="text" placeholder="Título del Video" className="p-4 border-2 border-slate-200 rounded-xl focus:border-red-500 outline-none font-medium" value={tituloVideo} onChange={e => setTituloVideo(e.target.value)} required />
+            <input type="url" placeholder="Link de YouTube" className="p-4 border-2 border-slate-200 rounded-xl focus:border-red-500 outline-none font-medium" value={urlYoutube} onChange={e => setUrlYoutube(e.target.value)} required />
           </div>
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col space-y-2">
             <label className="text-sm font-black text-slate-600 uppercase">Miniatura del Video</label>
-            <input type="file" accept="image/*" className="text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer" onChange={e => setMiniaturaVideo(e.target.files[0])} />
+            <input type="file" accept="image/*" className="text-sm text-slate-500 cursor-pointer" onChange={e => setMiniaturaVideo(e.target.files[0])} />
           </div>
-          <button disabled={subiendo} className="w-full bg-red-600 hover:bg-red-700 text-white p-5 rounded-2xl font-black text-lg transition-all shadow-lg shadow-red-200 active:scale-[0.98]">
+          <button disabled={subiendo} className="w-full bg-red-600 hover:bg-red-800 text-white p-5 rounded-2xl font-black text-lg transition-all active:scale-[0.98]">
             {subiendo ? "Subiendo..." : "PUBLICAR VIDEO DE YOUTUBE"}
           </button>
         </form>
@@ -203,15 +236,11 @@ const Admin = () => {
           <h3 className="text-xl font-black text-blue-800 uppercase pl-2">Edificios Activos</h3>
           <div className="space-y-2">
             {edificiosExistentes.map(edif => (
-              <div key={edif.id} className="relative bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between hover:shadow-md transition-shadow">
+              <div key={edif.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
                 <span className="truncate font-bold text-slate-700 uppercase">{edif.nombre}</span>
                 <button 
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    borrarEdificio(edif.id, edif.miniatura_url, edif.infografias);
-                  }} 
-                  className="relative z-50 bg-red-50 text-red-600 px-4 py-2 rounded-xl text-xs font-black hover:bg-red-600 hover:text-white transition-all uppercase cursor-pointer active:scale-95"
+                  onClick={() => borrarEdificio(edif.id, edif.miniatura_url, edif.infografias)} 
+                  className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-xs font-black hover:bg-red-600 hover:text-white transition-all uppercase"
                 >
                   Borrar
                 </button>
@@ -224,15 +253,11 @@ const Admin = () => {
           <h3 className="text-xl font-black text-red-800 uppercase pl-2">Videos Activos</h3>
           <div className="space-y-2">
             {videosExistentes.map(vid => (
-              <div key={vid.id} className="relative bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between hover:shadow-md transition-shadow">
+              <div key={vid.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
                 <span className="truncate font-bold text-slate-700 uppercase">{vid.titulo}</span>
                 <button 
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    borrarVideo(vid.id, vid.url_miniatura);
-                  }} 
-                  className="relative z-50 bg-red-50 text-red-600 px-4 py-2 rounded-xl text-xs font-black hover:bg-red-600 hover:text-white transition-all uppercase cursor-pointer active:scale-95"
+                  onClick={() => borrarVideo(vid.id, vid.url_miniatura)} 
+                  className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-xs font-black hover:bg-red-600 hover:text-white transition-all uppercase"
                 >
                   Borrar
                 </button>
