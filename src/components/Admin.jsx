@@ -34,6 +34,36 @@ function ToastCenter({ toasts, onRemove }) {
   );
 }
 
+// --- MODAL CONFIRMACIÓN BORRADO ---
+function ModalConfirmar({ visible, mensaje, onConfirmar, onCancelar }) {
+  if (!visible) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl border border-red-200 p-8 flex flex-col items-center gap-5 max-w-sm w-full mx-4">
+        <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center">
+          <Trash2 size={28} className="text-red-500" />
+        </div>
+        <p className="text-sm font-black uppercase tracking-widest text-slate-800 text-center">{mensaje}</p>
+        <p className="text-[11px] text-slate-400 text-center">Esta acción no se puede deshacer. Se borrarán los archivos del servidor.</p>
+        <div className="flex gap-3 w-full">
+          <button
+            onClick={onCancelar}
+            className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs uppercase hover:bg-slate-50 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirmar}
+            className="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-xs uppercase transition-colors"
+          >
+            Sí, eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- BARRA DE PROGRESO ---
 function ProgressBar({ progreso, label }) {
   if (progreso === 0) return null;
@@ -110,6 +140,9 @@ const Admin = () => {
   const [edificiosExistentes, setEdificiosExistentes] = useState([]);
   const [videosExistentes, setVideosExistentes] = useState([]);
 
+  // Modal confirmación
+  const [modalBorrar, setModalBorrar] = useState({ visible: false, mensaje: '', onConfirmar: null });
+
   // Estados Edificios
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -127,12 +160,10 @@ const Admin = () => {
   const [editandoVideoId, setEditandoVideoId] = useState(null);
   const [videoThumbExistente, setVideoThumbExistente] = useState('');
 
-  // Refs para resetear inputs
   const inputMiniaturaRef = useRef(null);
   const inputLaminasRef = useRef(null);
   const inputVideoThumbRef = useRef(null);
 
-  // --- TOAST HELPERS ---
   const showToast = useCallback((message, type = 'success') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
@@ -140,6 +171,12 @@ const Admin = () => {
   }, []);
 
   const removeToast = useCallback((id) => setToasts(prev => prev.filter(t => t.id !== id)), []);
+
+  // --- HELPER MODAL BORRAR ---
+  const confirmarBorrado = (mensaje, accion) => {
+    setModalBorrar({ visible: true, mensaje, onConfirmar: accion });
+  };
+  const cerrarModal = () => setModalBorrar({ visible: false, mensaje: '', onConfirmar: null });
 
   useEffect(() => { cargarDatos(); }, []);
 
@@ -161,17 +198,11 @@ const Admin = () => {
     if (inputVideoThumbRef.current) inputVideoThumbRef.current.value = '';
   };
 
-  // --- EDICIÓN EDIFICIO ---
   const prepararEdicionEdificio = (edif) => {
-    setEditandoId(edif.id);
-    setNombre(edif.nombre);
-    setDescripcion(edif.descripcion);
-    setUrlsExistentes(edif.infografias || []);
-    setMiniaturaExistente(edif.miniatura_url);
-    setEsVoluntario(edif.es_voluntario || false);
-    setArchivosOrdenados([]);
-    setMiniaturaEdificio(null);
-    resetInputsEdificio();
+    setEditandoId(edif.id); setNombre(edif.nombre); setDescripcion(edif.descripcion);
+    setUrlsExistentes(edif.infografias || []); setMiniaturaExistente(edif.miniatura_url);
+    setEsVoluntario(edif.es_voluntario || false); setArchivosOrdenados([]);
+    setMiniaturaEdificio(null); resetInputsEdificio();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -181,14 +212,9 @@ const Admin = () => {
     setMiniaturaEdificio(null); setProgreso(0); resetInputsEdificio();
   };
 
-  // --- EDICIÓN VIDEO ---
   const prepararEdicionVideo = (v) => {
-    setEditandoVideoId(v.id);
-    setTituloVideo(v.titulo);
-    setUrlYoutube(v.youtube_url);
-    setVideoThumbExistente(v.url_miniatura);
-    setMiniaturaVideo(null);
-    resetInputsVideo();
+    setEditandoVideoId(v.id); setTituloVideo(v.titulo); setUrlYoutube(v.youtube_url);
+    setVideoThumbExistente(v.url_miniatura); setMiniaturaVideo(null); resetInputsVideo();
   };
 
   const cancelarEdicionVideo = () => {
@@ -196,7 +222,6 @@ const Admin = () => {
     setVideoThumbExistente(''); setMiniaturaVideo(null); setProgreso(0); resetInputsVideo();
   };
 
-  // --- SUBIR EDIFICIO ---
   const manejarSubidaEdificio = async (e) => {
     e.preventDefault();
     if (!nombre) return showToast('Nombre obligatorio', 'error');
@@ -239,7 +264,6 @@ const Admin = () => {
     finally { setSubiendo(false); setProgreso(0); setLabelProgreso(''); }
   };
 
-  // --- SUBIR VIDEO ---
   const manejarSubidaVideo = async (e) => {
     e.preventDefault();
     if (!tituloVideo || !urlYoutube) return showToast('Título y URL obligatorios', 'error');
@@ -265,27 +289,34 @@ const Admin = () => {
     finally { setSubiendo(false); setProgreso(0); setLabelProgreso(''); }
   };
 
-  // --- BORRAR ---
   const borrarItem = async (tabla, id, urlMin, urlsGaleria = []) => {
-    if (!confirm('¿Eliminar permanentemente? Se borrarán los archivos del servidor.')) return;
-    try {
-      const files = [extraerNombre(urlMin), ...urlsGaleria.map(u => extraerNombre(u))].filter(Boolean);
-      if (files.length > 0) await supabase.storage.from('galeria').remove(files);
-      await supabase.from(tabla).delete().eq('id', id);
-      showToast('Elemento eliminado', 'error');
-      cargarDatos();
-    } catch (err) { showToast('Error al borrar: ' + err.message, 'error'); }
+    confirmarBorrado('¿Eliminar permanentemente?', async () => {
+      cerrarModal();
+      try {
+        const files = [extraerNombre(urlMin), ...urlsGaleria.map(u => extraerNombre(u))].filter(Boolean);
+        if (files.length > 0) await supabase.storage.from('galeria').remove(files);
+        await supabase.from(tabla).delete().eq('id', id);
+        showToast('Elemento eliminado', 'error');
+        cargarDatos();
+      } catch (err) { showToast('Error al borrar: ' + err.message, 'error'); }
+    });
   };
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-10 font-sans text-slate-900">
       <ToastCenter toasts={toasts} onRemove={removeToast} />
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <ModalConfirmar
+        visible={modalBorrar.visible}
+        mensaje={modalBorrar.mensaje}
+        onConfirmar={modalBorrar.onConfirmar}
+        onCancelar={cerrarModal}
+      />
 
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-7 space-y-8">
           <div className="flex justify-between items-end">
             <h1 className="text-3xl font-black text-blue-900 uppercase italic">Admin Central KOH</h1>
-            <p className="text-[10px] text-slate-400 font-mono">v2.9 — Drag & Drop</p>
+            <p className="text-[10px] text-slate-400 font-mono">v3.0 — Modal Confirm</p>
           </div>
 
           {/* FORM EDIFICIOS */}
@@ -316,7 +347,6 @@ const Admin = () => {
                 </div>
               </div>
 
-              {/* DRAG & DROP */}
               {archivosOrdenados.length > 0 && (
                 <LaminasSorter archivos={archivosOrdenados} onChange={setArchivosOrdenados} />
               )}
@@ -403,7 +433,6 @@ const Admin = () => {
             ))}
           </div>
         </div>
-
       </div>
     </div>
   );
