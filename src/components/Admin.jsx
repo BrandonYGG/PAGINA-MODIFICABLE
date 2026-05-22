@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import imageCompression from 'browser-image-compression';
-import { Trash2, Edit2, X, Video, Image as ImageIcon, CheckCircle, AlertCircle, GripVertical } from 'lucide-react';
+import { Trash2, Edit2, X, Video, Image as ImageIcon, CheckCircle, AlertCircle, GripVertical, HardDrive, RefreshCw } from 'lucide-react';
 
 // --- COMPRESIÓN ---
 const comprimirImagen = async (file) => {
@@ -46,16 +46,10 @@ function ModalConfirmar({ visible, mensaje, onConfirmar, onCancelar }) {
         <p className="text-sm font-black uppercase tracking-widest text-slate-800 text-center">{mensaje}</p>
         <p className="text-[11px] text-slate-400 text-center">Esta acción no se puede deshacer. Se borrarán los archivos del servidor.</p>
         <div className="flex gap-3 w-full">
-          <button
-            onClick={onCancelar}
-            className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs uppercase hover:bg-slate-50 transition-colors"
-          >
+          <button onClick={onCancelar} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs uppercase hover:bg-slate-50 transition-colors">
             Cancelar
           </button>
-          <button
-            onClick={onConfirmar}
-            className="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-xs uppercase transition-colors"
-          >
+          <button onClick={onConfirmar} className="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-xs uppercase transition-colors">
             Sí, eliminar
           </button>
         </div>
@@ -64,7 +58,7 @@ function ModalConfirmar({ visible, mensaje, onConfirmar, onCancelar }) {
   );
 }
 
-// --- BARRA DE PROGRESO ---
+// --- BARRA DE PROGRESO SUBIDA ---
 function ProgressBar({ progreso, label }) {
   if (progreso === 0) return null;
   return (
@@ -76,6 +70,121 @@ function ProgressBar({ progreso, label }) {
       <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
         <div className="h-full bg-blue-500 rounded-full transition-all duration-300" style={{ width: `${progreso}%` }} />
       </div>
+    </div>
+  );
+}
+
+// --- CONTADOR DE ALMACENAMIENTO ---
+const LIMITE_GB = 1; // Plan gratuito Supabase
+const LIMITE_BYTES = LIMITE_GB * 1024 * 1024 * 1024;
+
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+function StorageWidget({ refrescar }) {
+  const [totalBytes, setTotalBytes] = useState(null);
+  const [totalArchivos, setTotalArchivos] = useState(0);
+  const [cargando, setCargando] = useState(true);
+
+  const calcularStorage = useCallback(async () => {
+    setCargando(true);
+    try {
+      // Supabase list() trae max 100 por página, hacemos paginación
+      let offset = 0;
+      let todosLosArchivos = [];
+      while (true) {
+        const { data, error } = await supabase.storage.from('galeria').list('', {
+          limit: 100,
+          offset,
+          sortBy: { column: 'name', order: 'asc' },
+        });
+        if (error || !data || data.length === 0) break;
+        todosLosArchivos = [...todosLosArchivos, ...data];
+        if (data.length < 100) break;
+        offset += 100;
+      }
+      const suma = todosLosArchivos.reduce((acc, f) => acc + (f.metadata?.size || 0), 0);
+      setTotalBytes(suma);
+      setTotalArchivos(todosLosArchivos.length);
+    } catch (err) {
+      console.error('Error calculando storage:', err);
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
+  useEffect(() => { calcularStorage(); }, [calcularStorage, refrescar]);
+
+  const porcentaje = totalBytes !== null ? Math.min((totalBytes / LIMITE_BYTES) * 100, 100) : 0;
+  const color = porcentaje > 80 ? 'bg-red-500' : porcentaje > 50 ? 'bg-yellow-500' : 'bg-green-500';
+  const textColor = porcentaje > 80 ? 'text-red-600' : porcentaje > 50 ? 'text-yellow-600' : 'text-green-600';
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <HardDrive size={16} className="text-slate-500" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Almacenamiento</span>
+        </div>
+        <button onClick={calcularStorage} className="text-slate-400 hover:text-blue-500 transition-colors" title="Refrescar">
+          <RefreshCw size={13} className={cargando ? 'animate-spin' : ''} />
+        </button>
+      </div>
+
+      {cargando ? (
+        <div className="space-y-2">
+          <div className="h-2 bg-slate-100 rounded-full animate-pulse" />
+          <div className="h-3 w-1/2 bg-slate-100 rounded animate-pulse" />
+        </div>
+      ) : (
+        <>
+          {/* Barra de uso */}
+          <div className="space-y-1.5">
+            <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-700 ${color}`}
+                style={{ width: `${porcentaje}%` }}
+              />
+            </div>
+            <div className="flex justify-between items-center">
+              <span className={`text-[10px] font-black ${textColor}`}>
+                {formatBytes(totalBytes)} usados
+              </span>
+              <span className="text-[10px] text-slate-400 font-bold">
+                {LIMITE_GB} GB límite
+              </span>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100">
+            <div className="text-center">
+              <p className={`text-base font-black ${textColor}`}>{porcentaje.toFixed(1)}%</p>
+              <p className="text-[8px] text-slate-400 uppercase font-bold">Usado</p>
+            </div>
+            <div className="text-center border-x border-slate-100">
+              <p className="text-base font-black text-slate-700">{totalArchivos}</p>
+              <p className="text-[8px] text-slate-400 uppercase font-bold">Archivos</p>
+            </div>
+            <div className="text-center">
+              <p className="text-base font-black text-slate-700">{formatBytes(LIMITE_BYTES - totalBytes)}</p>
+              <p className="text-[8px] text-slate-400 uppercase font-bold">Libres</p>
+            </div>
+          </div>
+
+          {porcentaje > 80 && (
+            <div className="flex items-center gap-2 p-2 bg-red-50 rounded-lg border border-red-200">
+              <AlertCircle size={13} className="text-red-500 shrink-0" />
+              <p className="text-[9px] text-red-600 font-bold">Almacenamiento casi lleno. Considera eliminar archivos.</p>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -119,9 +228,7 @@ function LaminasSorter({ archivos, onChange }) {
             <div className="absolute top-2 left-2 bg-blue-600 rounded-full w-6 h-6 flex items-center justify-center">
               <span className="text-[10px] font-black text-white">{idx + 1}</span>
             </div>
-            <div className="absolute top-2 right-2 text-white/70">
-              <GripVertical size={14} />
-            </div>
+            <div className="absolute top-2 right-2 text-white/70"><GripVertical size={14} /></div>
             <p className="absolute bottom-2 left-0 right-0 text-center text-[8px] text-white truncate px-2">{file.name}</p>
             {dragOver === idx && <div className="absolute inset-0 border-2 border-blue-500 rounded-xl bg-blue-500/10" />}
           </div>
@@ -139,11 +246,10 @@ const Admin = () => {
   const [toasts, setToasts] = useState([]);
   const [edificiosExistentes, setEdificiosExistentes] = useState([]);
   const [videosExistentes, setVideosExistentes] = useState([]);
+  const [refrescarStorage, setRefrescarStorage] = useState(0);
 
-  // Modal confirmación
   const [modalBorrar, setModalBorrar] = useState({ visible: false, mensaje: '', onConfirmar: null });
 
-  // Estados Edificios
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [esVoluntario, setEsVoluntario] = useState(false);
@@ -153,7 +259,6 @@ const Admin = () => {
   const [urlsExistentes, setUrlsExistentes] = useState([]);
   const [miniaturaExistente, setMiniaturaExistente] = useState('');
 
-  // Estados Videos
   const [tituloVideo, setTituloVideo] = useState('');
   const [urlYoutube, setUrlYoutube] = useState('');
   const [miniaturaVideo, setMiniaturaVideo] = useState(null);
@@ -172,10 +277,7 @@ const Admin = () => {
 
   const removeToast = useCallback((id) => setToasts(prev => prev.filter(t => t.id !== id)), []);
 
-  // --- HELPER MODAL BORRAR ---
-  const confirmarBorrado = (mensaje, accion) => {
-    setModalBorrar({ visible: true, mensaje, onConfirmar: accion });
-  };
+  const confirmarBorrado = (mensaje, accion) => setModalBorrar({ visible: true, mensaje, onConfirmar: accion });
   const cerrarModal = () => setModalBorrar({ visible: false, mensaje: '', onConfirmar: null });
 
   useEffect(() => { cargarDatos(); }, []);
@@ -194,9 +296,7 @@ const Admin = () => {
     if (inputMiniaturaRef.current) inputMiniaturaRef.current.value = '';
     if (inputLaminasRef.current) inputLaminasRef.current.value = '';
   };
-  const resetInputsVideo = () => {
-    if (inputVideoThumbRef.current) inputVideoThumbRef.current.value = '';
-  };
+  const resetInputsVideo = () => { if (inputVideoThumbRef.current) inputVideoThumbRef.current.value = ''; };
 
   const prepararEdicionEdificio = (edif) => {
     setEditandoId(edif.id); setNombre(edif.nombre); setDescripcion(edif.descripcion);
@@ -260,6 +360,7 @@ const Admin = () => {
 
       showToast('¡Edificio sincronizado con éxito!', 'success');
       cancelarEdicion(); cargarDatos();
+      setRefrescarStorage(r => r + 1); // refresca el widget
     } catch (err) { showToast(err.message, 'error'); }
     finally { setSubiendo(false); setProgreso(0); setLabelProgreso(''); }
   };
@@ -285,6 +386,7 @@ const Admin = () => {
 
       showToast('¡Video guardado con éxito!', 'success');
       cancelarEdicionVideo(); cargarDatos();
+      setRefrescarStorage(r => r + 1);
     } catch (err) { showToast(err.message, 'error'); }
     finally { setSubiendo(false); setProgreso(0); setLabelProgreso(''); }
   };
@@ -298,6 +400,7 @@ const Admin = () => {
         await supabase.from(tabla).delete().eq('id', id);
         showToast('Elemento eliminado', 'error');
         cargarDatos();
+        setRefrescarStorage(r => r + 1);
       } catch (err) { showToast('Error al borrar: ' + err.message, 'error'); }
     });
   };
@@ -316,7 +419,7 @@ const Admin = () => {
         <div className="lg:col-span-7 space-y-8">
           <div className="flex justify-between items-end">
             <h1 className="text-3xl font-black text-blue-900 uppercase italic">Admin Central KOH</h1>
-            <p className="text-[10px] text-slate-400 font-mono">v3.0 — Modal Confirm</p>
+            <p className="text-[10px] text-slate-400 font-mono">v3.1 — Storage</p>
           </div>
 
           {/* FORM EDIFICIOS */}
@@ -405,6 +508,10 @@ const Admin = () => {
 
         {/* LISTADO LATERAL */}
         <div className="lg:col-span-5 space-y-6 pt-16">
+
+          {/* WIDGET STORAGE */}
+          <StorageWidget refrescar={refrescarStorage} />
+
           <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b pb-2">Inventario en la Nube</h2>
           <div className="space-y-3">
             {edificiosExistentes.map(e => (
