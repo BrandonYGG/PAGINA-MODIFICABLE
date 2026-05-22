@@ -129,7 +129,7 @@ function StorageWidget({ refrescar }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <HardDrive size={16} className="text-slate-500" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Almacenamiento</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Almacenamiento de la Nube</span>
         </div>
         <button onClick={calcularStorage} className="text-slate-400 hover:text-blue-500 transition-colors" title="Refrescar">
           <RefreshCw size={13} className={cargando ? 'animate-spin' : ''} />
@@ -156,7 +156,7 @@ function StorageWidget({ refrescar }) {
                 {formatBytes(totalBytes)} usados
               </span>
               <span className="text-[10px] text-slate-400 font-bold">
-                {LIMITE_GB} GB límite
+                {LIMITE_GB} GB límite de espacio.
               </span>
             </div>
           </div>
@@ -165,11 +165,11 @@ function StorageWidget({ refrescar }) {
           <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100">
             <div className="text-center">
               <p className={`text-base font-black ${textColor}`}>{porcentaje.toFixed(1)}%</p>
-              <p className="text-[8px] text-slate-400 uppercase font-bold">Usado</p>
+              <p className="text-[8px] text-slate-400 uppercase font-bold">Has usado</p>
             </div>
             <div className="text-center border-x border-slate-100">
               <p className="text-base font-black text-slate-700">{totalArchivos}</p>
-              <p className="text-[8px] text-slate-400 uppercase font-bold">Archivos</p>
+              <p className="text-[8px] text-slate-400 uppercase font-bold">Imagenes/Archivos</p>
             </div>
             <div className="text-center">
               <p className="text-base font-black text-slate-700">{formatBytes(LIMITE_BYTES - totalBytes)}</p>
